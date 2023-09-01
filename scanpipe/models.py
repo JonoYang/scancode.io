@@ -71,6 +71,7 @@ from cyclonedx.model import component as cyclonedx_component
 from formattedcode.output_cyclonedx import CycloneDxExternalRef
 from licensedcode.cache import build_spdx_license_expression
 from licensedcode.cache import get_licensing
+from matchcode_toolkit.fingerprinting import IGNORED_DIRECTORY_FINGERPRINTS
 from packageurl import PackageURL
 from packageurl import normalize_qualifiers
 from packageurl.contrib.django.models import PackageURLMixin
@@ -1689,9 +1690,12 @@ class CodebaseResourceQuerySet(ProjectRelatedQuerySet):
     def has_directory_content_fingerprint(self):
         """
         Resources that have the key `directory_content` set in the `extra_data`
-        field.
+        field and `directory_content` is not part of `IGNORED_DIRECTORY_FINGERPRINTS`.
         """
-        return self.filter(~Q(extra_data__directory_content=""))
+        return self.filter(
+            ~Q(extra_data__directory_content="")
+            and ~Q(extra_data__directory_content__in=IGNORED_DIRECTORY_FINGERPRINTS)
+        )
 
     def paginated(self, per_page=5000):
         """
