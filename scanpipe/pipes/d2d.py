@@ -704,7 +704,6 @@ def _map_about_file_resource(project, about_file_resource, to_resources):
 
     error_message_details = {
         "path": about_file_resource.path,
-        "package_data": package_data,
     }
     if not package_data:
         project.add_error(
