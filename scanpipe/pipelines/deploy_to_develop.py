@@ -119,10 +119,6 @@ class DeployToDevelop(Pipeline):
         """Compute directory fingerprints for matching"""
         matchcode.fingerprint_codebase_directories(self.project, to_codebase_only=True)
 
-    def fingerprint_codebase_directories(self):
-        """Compute directory fingerprints for matching"""
-        matchcode.fingerprint_codebase_directories(self.project, to_codebase_only=True)
-
     def map_about_files(self):
         """Map ``from/`` .ABOUT files to their related ``to/`` resources."""
         d2d.map_about_files(project=self.project, logger=self.log)
