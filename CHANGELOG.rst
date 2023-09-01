@@ -1,7 +1,7 @@
 Changelog
 =========
 
-v32.5.3 (unreleased)
+v32.6.0 (2023-08-29)
 --------------------
 
 - Improve the performance of the codebase relations list view to support large number
@@ -36,6 +36,9 @@ v32.5.3 (unreleased)
 - Migrate the ProjectError model to a global ProjectMessage.
   3 level of severity available: INFO, WARNING, and ERROR.
   https://github.com/nexB/scancode.io/issues/338
+
+- Add label/tag system that can be used to group and filters projects.
+  https://github.com/nexB/scancode.io/issues/769
 
 v32.5.2 (2023-08-14)
 --------------------
