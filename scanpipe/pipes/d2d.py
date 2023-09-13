@@ -410,13 +410,15 @@ def map_path(project, logger=None):
         _map_path_resource(to_resource, from_resources, from_resources_index)
 
 
-def create_package_from_purldb_data(project, resources, package_data):
+def create_package_from_purldb_data(project, resources, package_data, **kwargs):
     """
     Create a DiscoveredPackage instance from PurlDB ``package_data``.
 
     Return a tuple, containing the created DiscoveredPackage and the number of
     CodebaseResources matched to PurlDB that are part of that DiscoveredPackage.
     """
+    is_jgroups = kwargs.get('is_jgroups')
+    logger = kwargs.get('logger')
     package_data = package_data.copy()
     # Do not re-use uuid from PurlDB as DiscoveredPackage.uuid is unique and a
     # PurlDB match can be found in different projects.
@@ -444,7 +446,8 @@ def create_package_from_purldb_data(project, resources, package_data):
                 path = f"{resource.path}/"
                 lookups |= Q(path__startswith=path)
         resources_qs = project.codebaseresources.to_codebase().filter(lookups)
-
+    if is_jgroups:
+        logger(resources_qs)
     package = pipes.update_or_create_package(
         project=project,
         package_data=package_data,
@@ -459,6 +462,8 @@ def create_package_from_purldb_data(project, resources, package_data):
         status=flag.MATCHED_TO_PURLDB
     ).count()
     updated_resources_count = resources_qs.update(status=flag.MATCHED_TO_PURLDB)
+    if is_jgroups:
+        logger(f"updated_resources_count: {updated_resources_count}")
     matched_resources_count = (
         updated_resources_count - previously_matched_resources_count
     )
@@ -474,6 +479,7 @@ def match_purldb_package(
     process the matched Package data, then return the number of
     CodebaseResources that were matched to a Package.
     """
+    logger = kwargs.get('logger')
     match_count = 0
     sha1_list = list(resources_by_sha1.keys())
     if results := purldb.match_packages(
@@ -482,14 +488,21 @@ def match_purldb_package(
     ):
         # Process matched Package data
         for package_data in results:
+            is_jgroups = False
             sha1 = package_data["sha1"]
             resources = resources_by_sha1.get(sha1) or []
+            if sha1 == "8e7f0bc67e2de3e8907a2ee99e360edc4f72cc7b":
+                is_jgroups = True
+                logger(f"processing results for (8e7f0bc67e2de3e8907a2ee99e360edc4f72cc7b)")
+                logger(resources)
             if not resources:
                 continue
             _, matched_resources_count = create_package_from_purldb_data(
                 project=project,
                 resources=resources,
                 package_data=package_data,
+                logger=logger,
+                is_jgroups=is_jgroups,
             )
             match_count += matched_resources_count
     return match_count
@@ -508,6 +521,7 @@ def match_purldb_resource(
     package instance URLs. This is intended to be used as a cache, to avoid
     retrieving package data we retrieved before.
     """
+    logger = kwargs.get("logger")
     package_data_by_purldb_urls = package_data_by_purldb_urls or {}
     match_count = 0
     sha1_list = list(resources_by_sha1.keys())
@@ -525,6 +539,9 @@ def match_purldb_resource(
                 package_data = package_data_by_purldb_urls[package_instance_url]
             sha1 = result["sha1"]
             resources = resources_by_sha1.get(sha1) or []
+            if sha1 == "8e7f0bc67e2de3e8907a2ee99e360edc4f72cc7b":
+                logger(f"processing results for (8e7f0bc67e2de3e8907a2ee99e360edc4f72cc7b)")
+                logger(resources)
             if not resources:
                 continue
             _, matched_resources_count = create_package_from_purldb_data(
@@ -587,6 +604,8 @@ def match_purldb_resources(
 
     for resources_batch in resource_iterator:
         for to_resource in progress.iter(resources_batch):
+            if to_resource.sha1 == "8e7f0bc67e2de3e8907a2ee99e360edc4f72cc7b":
+                logger(f'{to_resource.path} (8e7f0bc67e2de3e8907a2ee99e360edc4f72cc7b) added to resources_by_sha1')
             resources_by_sha1[to_resource.sha1].append(to_resource)
             if to_resource.path.endswith(".map"):
                 for js_sha1 in js.source_content_sha1_list(to_resource):
@@ -596,6 +615,7 @@ def match_purldb_resources(
             project=project,
             resources_by_sha1=resources_by_sha1,
             package_data_by_purldb_urls=package_data_by_purldb_urls,
+            logger=logger,
         )
 
         # Keep track of the total number of SHA1s we send
@@ -619,7 +639,7 @@ def match_purldb_directories(project, logger=None):
     # more "higher-up" directories we can match to means that we reduce the
     # number of queries made to purldb.
     to_directories = (
-        project.codebaseresources.directories().to_codebase().order_by("path")
+        project.codebaseresources.directories().to_codebase().no_status().order_by("path")
     )
     directory_count = to_directories.count()
 
