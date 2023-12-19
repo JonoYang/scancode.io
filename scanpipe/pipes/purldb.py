@@ -327,12 +327,6 @@ def send_project_json_to_matchcode(project_json_location, timeout=DEFAULT_TIMEOU
     """
     project_json_contents = open(project_json_location, "rb")
     files = {"upload_file": project_json_contents}
-
-    response = request_post(
-        url=f"{api_url}matching/",
-        data={},
-        timeout=timeout,
-        files=files,
-    )
-
-    return response
+    url=f"{api_url}matching/"
+    response = requests.post(url, files=files, timeout=timeout)
+    return response.json()

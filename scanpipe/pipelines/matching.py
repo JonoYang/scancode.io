@@ -55,18 +55,23 @@ class Matching(ScanCodebase):
     def match_to_purldb(self):
         # send scan to purldb
         response = purldb.send_project_json_to_matchcode(self.scan_output_location)
+        run_url = response["runs"][0]["url"]
         url = response.get("url")
         results_url = url + "results/"
 
-        # poll and get match results
+        # poll and see if the match run is ready
         while True:
-            response = purldb.request_get(results_url)
+            response = purldb.request_get(run_url)
             if response:
-                match_results = response
-                break
+                status = response["status"]
+                if status == "success":
+                    break
             time.sleep(10)
 
-        # organize resources by package_uids
+        # get match results
+        match_results = purldb.request_get(results_url)
+
+        # map match results
         matched_packages = match_results.get('packages', [])
         resource_results = match_results.get('files', [])
         resource_paths_by_package_uids = defaultdict(list)
